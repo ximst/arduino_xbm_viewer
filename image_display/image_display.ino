@@ -7,39 +7,21 @@
 #define DAC_SEL_CHA_B PORTB |= 0x02;
 #define DAC_WR_LO PORTB &= ~0x01;
 #define DAC_WR_HI PORTB |= 0x01;
+#define DAC_WRITE(value, channel) DAC_PORT = value; DAC_SEL_CHA_##channel; DAC_WR_LO; DAC_WR_HI;
 
-static uint8_t value1 = 0;
-static uint8_t value2 = 0;
-static uint8_t value3 = 0;
 
 void setup() 
 {
 
-Serial.begin(9600);   
-
+ Serial.begin(9600);   
  Serial.println("Hello world!");
 
-#if 0 
- Timer1.initialize(1);
- Timer1.setPeriod(1);
- Timer1.attachInterrupt(blankScreen);
-#endif
- 
-  // set port direction to output
+ // set port direction to output
   DDRD |= B11111111;
   DDRB |= B00000011;
-  DAC_SEL_CHA_A;
-  DAC_WR_HI;
 
-  // clear both DAC channels
-  PORTD = 0;
-  DAC_SEL_CHA_A;
-  DAC_WR_LO;
-  DAC_WR_HI;
-  
-  DAC_SEL_CHA_B;
-  DAC_WR_LO;
-  DAC_WR_HI;
+  DAC_WRITE(0, A);
+  DAC_WRITE(0, B);  
 }
 
 static void
@@ -48,15 +30,8 @@ moveto(
   uint8_t y
 )
 {
-    PORTD = x;
-    DAC_SEL_CHA_A;
-    DAC_WR_LO;
-    DAC_WR_HI;
-
-    PORTD = y;
-    DAC_SEL_CHA_B;
-    DAC_WR_LO;
-    DAC_WR_HI;
+  DAC_WRITE(x, A); 
+  DAC_WRITE(y, B); 
 }
 
 void
@@ -69,11 +44,7 @@ line_vert(
   moveto(x0, y0);
   for (uint8_t i = 0 ; i < w ; i++)
   {
-    PORTD = y0++;
-    DAC_SEL_CHA_B;
-    DAC_WR_LO;
-    DAC_WR_HI;
-    
+    DAC_WRITE(y0++, B); 
   }
 }
 
@@ -87,10 +58,7 @@ line_horiz(
   moveto(x0, y0);
   for (uint8_t i = 0 ; i < h ; i++)
   {
-    PORTD = x0++;
-    DAC_SEL_CHA_A;
-    DAC_WR_LO;
-    DAC_WR_HI;
+    DAC_WRITE(x0++, A); 
   }
 }
 
@@ -157,45 +125,13 @@ line(
     if (e2 > -dy)
     {
       err = err - dy;
-      PORTD = (x0 += sx);
-      DAC_SEL_CHA_A;
-      DAC_WR_LO;
-      DAC_WR_HI;
-
+      DAC_WRITE((x0 += sx), A); 
     }
     if (e2 < dx)
     {
       err = err + dx;
-      PORTD = (y0 += sy);
-      DAC_SEL_CHA_B;
-      DAC_WR_LO;
-      DAC_WR_HI;
+      DAC_WRITE((y0 += sy), B); 
     }
-
-  }
-}
-
-
-void blankScreen() 
-{
-  // write channel A
-
-  value1 += 2;
-  
-  PORTD = value1;
-  DAC_SEL_CHA_A;
-  DAC_WR_LO;
-  DAC_WR_HI;
-  
-  if (!value1)
-  {
-    // write channel B
-    value2+=2;
-    
-    PORTD = value2;
-    DAC_SEL_CHA_B;
-    DAC_WR_LO;
-    DAC_WR_HI;
   }
 }
 
@@ -228,21 +164,10 @@ static void draw_text(void)
       draw_char_med(x, y, text[row][col]);
       x += 32;
     }
-
     y -= height;
   }
 }
 
 void loop() {
-  static uint8_t hight = 20;
-
-  //line(0, 255 - hight, 255, hight);  hight++;
-
-  //draw_char_big(100,100,76);
-
-  //line(0,20,0,120);
-
    draw_text();
-
- // delay(1000);
 }
