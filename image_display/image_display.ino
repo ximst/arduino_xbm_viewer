@@ -1,5 +1,5 @@
-#include "TimerOne.h" 
 #include "vector.h"
+#include "dcf77.h"
 #include <avr/pgmspace.h>
 
 #define DAC_PORT PORTD
@@ -9,19 +9,39 @@
 #define DAC_WR_HI PORTB |= 0x01;
 #define DAC_WRITE(value, channel) DAC_PORT = value; DAC_SEL_CHA_##channel; DAC_WR_LO; DAC_WR_HI;
 
+#define MAX_ROWS 4
+#define MAX_COLS 11
+
+static char text[MAX_ROWS][MAX_COLS] = {
+  { "STAR" },
+  { "WARS" },
+  { "7" },
+  {""}
+/*
+  { "012345678901234" },
+  { "0123456789-=" },
+  { "~!@#$%^&*\\|_" },
+  { "+`[]{}()<>/?" },
+*/
+};
+
+static String timeString = "00:00:00";
 
 void setup() 
 {
 
  Serial.begin(9600);   
  Serial.println("Hello world!");
-
+  DCF77Init();
  // set port direction to output
   DDRD |= B11111111;
   DDRB |= B00000011;
 
   DAC_WRITE(0, A);
   DAC_WRITE(0, B);  
+
+  timeString.toCharArray(text[3] , 9);
+
 }
 
 static void
@@ -135,22 +155,6 @@ line(
   }
 }
 
-#define MAX_ROWS 3
-#define MAX_COLS 11
-
-static char text[MAX_ROWS][MAX_COLS] = {
-  { "STAR" },
-  { "WARS" },
-  { "7" }
-/*
-  { "012345678901234" },
-  { "0123456789-=" },
-  { "~!@#$%^&*\\|_" },
-  { "+`[]{}()<>/?" },
-*/
-};
-
-
 static void draw_text(void)
 {
   const uint8_t height = 40;
@@ -168,6 +172,61 @@ static void draw_text(void)
   }
 }
 
+
 void loop() {
-   draw_text();
+
+  
+  draw_text();
+
+    // hh
+    if (hh < 10)
+    {
+      timeString = "0";
+    }
+    else
+    {
+      timeString = "";
+    }
+    timeString += hh;
+
+    // mm
+    if (mm < 10)
+    {
+      timeString += ":0";
+    }
+    else
+    {
+      timeString += ":";
+    }
+    timeString += mm;
+
+    // ss
+    if (bufferPosition < 10)
+    {
+      timeString += ":0";
+    }
+    else
+    {
+      timeString += ":";
+    }
+    timeString += bufferPosition;
+
+    timeString.toCharArray(text[3] , 9);
+    
+  if (bufferPosition != previousSecond) {
+    Serial.print("Time: ");
+    Serial.println(timeString);
+    //serialDumpTime();
+    previousSecond = bufferPosition;
+  }
+  if (DCFSignalState != previousSignalState) {
+    scanSignal();
+    if (DCFSignalState) {
+      digitalWrite(BLINKPIN, HIGH);
+    } else {
+      digitalWrite(BLINKPIN, LOW);
+    }
+    previousSignalState = DCFSignalState;
+  }
+  
 }
