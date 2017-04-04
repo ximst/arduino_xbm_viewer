@@ -9,14 +9,16 @@
 #define DAC_WR_HI PORTB |= 0x01;
 #define DAC_WRITE(value, channel) DAC_PORT = value; DAC_SEL_CHA_##channel; DAC_WR_LO; DAC_WR_HI;
 
-#define MAX_ROWS 4
+#define MAX_ROWS 5
 #define MAX_COLS 11
 
+#define USE_DCF77 0
 static char text[MAX_ROWS][MAX_COLS] = {
-  { "STAR" },
-  { "WARS" },
-  { "7" },
-  {""}
+  { "BAKER" },
+  { "HUGHES" },
+  { "MAKER" },
+  { "FAIRE" },
+  { "   " }
 /*
   { "012345678901234" },
   { "0123456789-=" },
@@ -32,7 +34,6 @@ void setup()
 
  Serial.begin(9600);   
  Serial.println("Hello world!");
-  DCF77Init();
  // set port direction to output
   DDRD |= B11111111;
   DDRB |= B00000011;
@@ -40,8 +41,10 @@ void setup()
   DAC_WRITE(0, A);
   DAC_WRITE(0, B);  
 
-  timeString.toCharArray(text[3] , 9);
-
+#if USE_DCF77
+  DCF77Init();
+  timeString.toCharArray(text[4] , 9);
+#endif
 }
 
 static void
@@ -154,7 +157,7 @@ line(
     }
   }
 }
-
+static unsigned char offset = 0;
 static void draw_text(void)
 {
   const uint8_t height = 40;
@@ -165,7 +168,7 @@ static void draw_text(void)
     uint8_t x = 0;
     for (uint8_t col = 0 ; col < MAX_COLS ; col++)
     {
-      draw_char_med(x, y, text[row][col]);
+      draw_char_med(x + (offset % 32), y - (offset % 32), text[row][col]);
       x += 32;
     }
     y -= height;
@@ -175,9 +178,17 @@ static void draw_text(void)
 
 void loop() {
 
-  
+  static unsigned char throttle = 0;
   draw_text();
+  throttle++;
+  if ((throttle % 16) == 0)
+  {
+      offset++;
+  }
 
+#if USE_DCF77
+  if ((throttle % 16) == 0)
+  {
     // hh
     if (hh < 10)
     {
@@ -211,12 +222,12 @@ void loop() {
     }
     timeString += bufferPosition;
 
-    timeString.toCharArray(text[3] , 9);
+    timeString.toCharArray(text[4] , 9);
     
   if (bufferPosition != previousSecond) {
-    Serial.print("Time: ");
-    Serial.println(timeString);
-    //serialDumpTime();
+  //  Serial.print("Time: ");
+  //  Serial.println(timeString);
+  //  serialDumpTime();
     previousSecond = bufferPosition;
   }
   if (DCFSignalState != previousSignalState) {
@@ -228,5 +239,6 @@ void loop() {
     }
     previousSignalState = DCFSignalState;
   }
-  
+  }
+#endif
 }
